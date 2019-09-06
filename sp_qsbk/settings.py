@@ -107,7 +107,7 @@ ITEM_PIPELINES = {
 COOKIES_ENABLED = False
 
 # 延迟下载（/秒）
-DOWNLOAD_DELAY = 1.5
+# DOWNLOAD_DELAY = 1.5
 
 # The params of connecting the mongodb
 MONGO_URI = 'mongodb://127.0.0.1:27017'

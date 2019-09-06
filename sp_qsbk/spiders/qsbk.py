@@ -10,19 +10,26 @@ from sp_qsbk.items import SpQsbkItem
 class QsbkSpider(CrawlSpider):
     name = 'qsbk'
     allowed_domains = ['qiushibaike.com']
-    start_urls = ['https://www.qiushibaike.com/text/page/1/']
+    start_urls = [
+        'https://www.qiushibaike.com/',
+        'https://www.qiushibaike.com/hot/',
+        'https://www.qiushibaike.com/imgrank/',
+        'https://www.qiushibaike.com/text/',
+        'https://www.qiushibaike.com/pic/',
+        'https://www.qiushibaike.com/textnew/',
+    ]
 
     rules = (
         Rule(LinkExtractor(allow=r'/article/\d+'), callback='parse_item', follow=True),
+        Rule(LinkExtractor(allow=r'https://www.qiushibaike.com/hot/page/\d+/'), follow=True),
+        Rule(LinkExtractor(allow=r'https://www.qiushibaike.com/imgrank/page/\d+/'), follow=True),
         Rule(LinkExtractor(allow=r'https://www.qiushibaike.com/text/page/\d+/'), follow=True),
+        Rule(LinkExtractor(allow=r'https://www.qiushibaike.com/pic/page/\d+/'), follow=True),
+        Rule(LinkExtractor(allow=r'https://www.qiushibaike.com/textnew/page/\d+/'), follow=True),
     )
 
     def parse_item(self, response):
         item = {}
-        # item['domain_id'] = response.xpath('//input[@id="sid"]/@value').get()
-        # item['name'] = response.xpath('//div[@id="name"]').get()
-        # item['description'] = response.xpath('//div[@id="description"]').get()
-        # return item
         detail_page = response.xpath('//div[@id="content"]/div/div[@class="col1 new-style-col1"]')
         title = detail_page.xpath('./h1/text()').get().strip()
         author = re.search(r'(.*)的糗事.*', title, re.S)[1]
@@ -48,8 +55,7 @@ class QsbkSpider(CrawlSpider):
         item['content'] = content
         comment_info = []
         page = 1
-        # print(item)
-        yield scrapy.Request(url='https://www.qiushibaike.com/commentpage/{0}?page={1}&count=10'.format(article_id, page), meta={'item': item, 'comment_info': comment_info, 'page': page}, callback=self.parse_comment)
+        yield scrapy.Request(url='https://www.qiushibaike.com/commentpage/{0}?page=1&count=10'.format(article_id), meta={'item': item, 'comment_info': comment_info, 'page': page}, callback=self.parse_comment)
 
     def parse_comment(self, response):
         item = response.meta['item']
@@ -57,11 +63,10 @@ class QsbkSpider(CrawlSpider):
         comment_info = response.meta['comment_info']
         page = response.meta['page']
         text = str(json.loads(response.text))
-        count_pattern = re.compile(r".*?'count': (\d+).*?", re.S)
-        items_pattern = re.compile(r".*?'items': \[(.*?)\].*?", re.S)
-        count = re.search(count_pattern, text).group(1)
-        items = re.search(items_pattern, text)
-        if count == '0' or not items:
+        total_pattern = re.compile(r".*?'total': (\d+).*?", re.S)
+        total = re.search(total_pattern, text).group(1)
+        total_num = int(total) // 10 + 1
+        if page == total_num:
             item['comment'] = comment_info
             spqsbk_item = SpQsbkItem(
                 author=item['author'],
